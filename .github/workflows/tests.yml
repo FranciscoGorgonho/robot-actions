@@ -46,15 +46,30 @@ jobs:
         echo "PR source repo: ${{ github.event.pull_request.head.repo.full_name }}"
         echo "Target repo: ${{ github.repository }}"
 
-    - name: Robot Reporter
-      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-      uses: joonvena/robotframework-reporter-action@v2.4
-      with:
-        gh_access_token: ${{ secrets.GITHUB_TOKEN }}
-        report_path: logs
+    - name: Run Robot Reporter only if not fork
+      run: |
+        echo "Checking if PR is from fork..."
+        if [[ "${{ github.event_name }}" == "pull_request" ]] && [[ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]]; then
+          echo "Skipping Robot Reporter (PR from fork)"
+          exit 0
+        fi
+
+        echo "Running Robot Reporter via Docker"
+        docker run --rm \
+          -e GH_ACCESS_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+          -e REPOSITORY="${{ github.event.repository.name }}" \
+          -e REPOSITORY_OWNER="${{ github.repository_owner }}" \
+          -e COMMIT_SHA="${{ github.sha }}" \
+          -e REPORT_PATH="/logs" \
+          -e SUMMARY=true \
+          -e ONLY_SUMMARY=false \
+          -e SHOW_PASSED_TESTS=true \
+          -v "${{ github.workspace }}/logs:/logs" \
+          joonvena/robot-reporter:v2.4
 
     - name: Upload Robot Logs
       uses: actions/upload-artifact@v4
       with:
         name: robot-logs
         path: logs
+
