@@ -47,7 +47,9 @@ jobs:
         echo "Target repo: ${{ github.repository }}"
 
     - name: Robot Reporter
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
       uses: joonvena/robotframework-reporter-action@v2.4
       with:
         gh_access_token: ${{ secrets.GITHUB_TOKEN }}
         report_path: logs
+
